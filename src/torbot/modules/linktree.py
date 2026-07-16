@@ -14,6 +14,10 @@ from tabulate import tabulate
 from treelib import Tree, exceptions, Node
 from bs4 import BeautifulSoup
 
+
+class RequestError(Exception):
+    """Raised when a page request fails during crawling."""
+
 from .color import color
 from .config import project_root_directory
 from .nlp.main import classify
@@ -56,7 +60,16 @@ class LinkTree(Tree):
         Creates a node for a tree using the given ID which corresponds to a URL.
         If the parent_id is None, this will be considered a root node.
         """
-        resp = self._client.get(id)
+        try:
+            resp = self._client.get(id)
+        except Exception as exc:
+            logging.warning("Skipping URL %s due to request error: %s", id, exc)
+            raise RequestError(str(exc)) from exc
+
+        if not getattr(resp, "text", None):
+            logging.warning("Skipping URL %s because the response body was empty", id)
+            raise RequestError("empty response")
+
         soup = BeautifulSoup(resp.text, "html.parser")
         title = (
             soup.title.text.strip() if soup.title is not None else parse_hostname(id)
@@ -78,11 +91,19 @@ class LinkTree(Tree):
         """
         if depth > 0:
             depth -= 1
-            resp = self._client.get(url)
-            children = parse_links(resp.text)
+            try:
+                resp = self._client.get(url)
+            except Exception as exc:
+                logging.warning("Skipping subtree from %s due to request error: %s", url, exc)
+                return
+
+            children = parse_links(resp.text, base_url=url)
             for child in children:
-                self._append_node(id=child, parent_id=url)
-                self._build_tree(url=child, depth=depth)
+                try:
+                    self._append_node(id=child, parent_id=url)
+                    self._build_tree(url=child, depth=depth)
+                except RequestError:
+                    continue
 
     def _get_tree_file_name(self) -> str:
         root_id = self.root
@@ -164,17 +185,35 @@ def parse_hostname(url: str) -> str:
     raise Exception("unable to parse hostname from URL")
 
 
-def parse_links(html: str) -> list[str]:
+def parse_links(html: str, base_url: str | None = None) -> list[str]:
     """
     Finds all anchor tags and parses the href attribute.
+
+    Relative links are resolved against the page URL when a base URL is provided.
+    Only absolute http(s) links are returned.
     """
     soup = BeautifulSoup(html, "html.parser")
-    tags = soup.find_all("a")
-    return [
-        tag["href"]
-        for tag in tags
-        if tag.has_attr("href") and validators.url(tag["href"])
-    ]
+    links = []
+    for tag in soup.find_all("a"):
+        href = tag.get("href")
+        if not href or not isinstance(href, str):
+            continue
+
+        cleaned_href = href.strip()
+        if not cleaned_href or cleaned_href.startswith(("#", "mailto:", "tel:", "javascript:")):
+            continue
+
+        if base_url:
+            resolved = parse.urljoin(base_url, cleaned_href)
+        else:
+            resolved = cleaned_href
+
+        if validators.url(resolved) and resolved.startswith(("http://", "https://")):
+            links.append(resolved)
+        elif base_url and validators.url(cleaned_href):
+            links.append(cleaned_href)
+
+    return links
 
 
 def parse_emails(soup: BeautifulSoup) -> list[str]:

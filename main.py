@@ -61,11 +61,6 @@ def run(arg_parser: argparse.ArgumentParser, version: str) -> None:
     logging_lvl = logging.DEBUG if args.v else logging.INFO
     logging.basicConfig(level=logging_lvl, format=logging_fmt, datefmt=date_fmt)
 
-    # URL is a required argument
-    if not args.url:
-        arg_parser.print_help()
-        sys.exit()
-
     # Print verison then exit
     if args.version:
         print(f"TorBot Version: {version}")
@@ -74,6 +69,11 @@ def run(arg_parser: argparse.ArgumentParser, version: str) -> None:
     # check version and update if necessary
     if args.update:
         check_version()
+        sys.exit()
+
+    # URL is required for crawl-related actions
+    if not args.url:
+        arg_parser.print_help()
         sys.exit()
 
     socks5_host = args.host
@@ -123,7 +123,11 @@ def set_arguments() -> argparse.ArgumentParser:
         prog="TorBot", usage="Gather and analayze data from Tor sites."
     )
     parser.add_argument(
-        "-u", "--url", type=str, required=True, help="Specifiy a website link to crawl"
+        "-u",
+        "--url",
+        type=str,
+        default=None,
+        help="Specifiy a website link to crawl",
     )
     parser.add_argument(
         "--depth", type=int, help="Specifiy max depth of crawler (default 1)", default=1
