@@ -2,6 +2,12 @@
 --------------------
 All notable changes to this project will be documented in this file.
 
+## 4.1.1
+
+### Fixed
+- Adjusted the CLI so `--version` and `--update` can run without requiring a URL.
+- Improved crawler link parsing so relative links are resolved against the current page while unsupported hrefs are skipped cleanly.
+
 ## 2.1.0
 
 ### Added
