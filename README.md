@@ -39,44 +39,49 @@
 8. Built-in Updater
 9. Build a visual tree of link relationships that can be quickly viewed or saved to a file
 
+### Recent improvements
+- The CLI now allows `--version` and `--update` to run without requiring a URL.
+- The crawler now resolves relative links against the current page and skips unsupported or malformed hrefs more gracefully.
+
 ...(will be updated)
 
 ### Dependencies
 - Tor (Optional)
-- Python ^3.9
-- Poetry (Optional)
+- Python 3.9+
+- pip
 
-### Python Dependencies
+## Quick start
 
-(see pyproject.toml or requirements.txt for more details)
-
-## Installation
-
-### TorBot
-
-#### Using `venv`
-* If using Python ^3.4,
+### Local setup
 ```sh
-python -m venv torbot_venv
-source torbot_venv/bin/activate
-pip install -r requirements.txt
-pip install -e .
-./main.py --help
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+python -m pip install -e .
 ```
 
-#### Using `docker`
+### Run the CLI
 ```sh
-docker build -t {image_name} .
+python main.py --help
+python main.py --version
+python main.py -u https://example.com --depth 2 --visualize table
+```
 
-# Running without Tor
-docker run {image_name} poetry run python torbot -u https://example.com --depth 2 --visualize tree --save json --disable-socks5
+### Common examples
+```sh
+# Gather basic site information
+python main.py -u https://example.com --info
 
-# Running with Tor
-docker run --network="host" {image_name} poetry run python torbot -u https://example.com --depth 2 --visualize tree --save json --disable-socks5
+# Save the crawl tree as JSON
+python main.py -u https://example.com --depth 2 --save json
+
+# Disable SOCKS5 if you are not using Tor locally
+python main.py -u https://example.com --disable-socks5 --visualize tree
 ```
 
 ### Options
-<pre>
+```text
 usage: Gather and analyze data from Tor sites.
 
 optional arguments:
@@ -92,11 +97,14 @@ optional arguments:
   --save FORMAT         Save results in a file. (tree, JSON)
   --visualize FORMAT    Visualizes tree of data gathered. (tree, JSON, table)
   -i, --info            Info displays basic info of the scanned site
-  --disable-socks5      Executes HTTP requests without using SOCKS5 proxy</pre>
+  --disable-socks5      Executes HTTP requests without using SOCKS5 proxy
+```
 
-* NOTE: -u is a mandatory for crawling
+> `-u/--url` is required for crawl-related commands such as `--info`, `--save`, and `--visualize`.
 
-Read more about torrc here : [Torrc](https://github.com/DedSecInside/TorBoT/blob/master/Tor.md)
+If you are using Tor locally, keep the SOCKS5 proxy enabled. If you are not using Tor, add `--disable-socks5` to avoid proxy connection errors.
+
+Read more about torrc here: [Torrc](https://github.com/DedSecInside/TorBoT/blob/master/Tor.md)
 
 ## Curated Features
 - [x] Visualization Module Revamp
