@@ -23,7 +23,7 @@ pyinstaller-hooks-contrib==2024.6
 pyinstaller==6.8.0
 pysocks==1.7.1
 pytest==8.1.1
-python-dotenv==1.0.1
+python-dotenv==1.2.2
 pywin32-ctypes==0.2.2 ; sys_platform == "win32"
 scikit-learn==1.4.2
 scipy==1.13.0
