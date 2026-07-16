@@ -1,5 +1,3 @@
-import pytest
-
 from main import set_arguments
 from torbot.modules.linktree import parse_links
 

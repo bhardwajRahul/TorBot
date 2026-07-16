@@ -2,25 +2,25 @@
 Module is used for analyzing link relationships
 """
 import http.client
-import os
 import json
-import httpx
-import validators
 import logging
-import phonenumbers
-
+import os
 from urllib import parse
-from tabulate import tabulate
-from treelib import Tree, exceptions, Node
+
+import httpx
+import phonenumbers
+import validators
 from bs4 import BeautifulSoup
-
-
-class RequestError(Exception):
-    """Raised when a page request fails during crawling."""
+from tabulate import tabulate
+from treelib import Node, Tree, exceptions
 
 from .color import color
 from .config import project_root_directory
 from .nlp.main import classify
+
+
+class RequestError(Exception):
+    """Raised when a page request fails during crawling."""
 
 
 class LinkNode(Node):
