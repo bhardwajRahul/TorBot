@@ -2,6 +2,7 @@
 Module that contains methods for collecting all relevant data from links,
 and saving data to file.
 """
+
 import re
 import httpx
 import logging
@@ -10,6 +11,7 @@ from urllib.parse import urlsplit
 from bs4 import BeautifulSoup
 from termcolor import cprint
 
+from torbot.modules.linktree import LinkTree
 
 keys = set()  # high entropy strings, prolly secret keys
 files = set()  # pdf, css, png etc.
@@ -70,7 +72,6 @@ def execute_all(
         get_robots_txt,
         get_dot_git,
         get_dot_svn,
-        get_dot_git,
         get_intel,
         get_dot_htaccess,
         get_bitcoin_address,
@@ -84,6 +85,24 @@ def execute_all(
 
     display_webpage_description(soup)
     # display_headers(response)
+
+
+def fetch_html(
+    client: httpx.Client, link: str, tree: LinkTree, save_html: bool = False
+) -> None:
+    resp = client.get(url=link)
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    if save_html is False:
+        print(f"""
+            HTML file
+              {soup}
+        """)
+    else:  # save_html is True
+        file_name = tree._get_tree_file_name()
+        print(f"SAVED to {file_name}.html\n\n")
+        with open(f"{file_name}.html", "w+") as f:
+            f.write(str(soup))
 
 
 def display_headers(response):
@@ -114,7 +133,8 @@ def get_robots_txt(client: httpx.Client, target: str, response: str) -> None:
     target = "{0.scheme}://{0.netloc}/".format(urlsplit(url))
     client.get(target + "robots.txt")
     print(target + "robots.txt")
-    matches = re.findall(r"Allow: (.*)|Disallow: (.*)", response)
+
+    matches = re.findall(r"Allow: (.*)|Disallow: (.*)", response.text)
     for match in matches:
         match = "".join(match)
         if "*" not in match:
@@ -151,7 +171,7 @@ def get_dot_git(client: httpx.Client, target: str, response: str) -> None:
     url = target
     target = "{0.scheme}://{0.netloc}/".format(urlsplit(url))
     resp = client.get(target + "/.git/config")
-    if not resp.text.__contains__("404"):
+    if resp.status_code != 404:
         cprint("Alert!", "red")
         cprint(".git folder exposed publicly", "red")
     else:
@@ -181,8 +201,8 @@ def get_dot_svn(client: httpx.Client, target: str, response: str) -> None:
     cprint("[*]Checking for .svn folder", "yellow")
     url = target
     target = "{0.scheme}://{0.netloc}/".format(urlsplit(url))
-    resp = httpx.get(target + "/.svn/entries", proxies="socks5://127.0.0.1:9050")
-    if not resp.text.__contains__("404"):
+    resp = client.get(target + "/.svn/entries")
+    if resp.status_code != 404:
         cprint("Alert!", "red")
         cprint(".SVN folder exposed publicly", "red")
     else:
@@ -199,10 +219,10 @@ def get_dot_htaccess(client: httpx.Client, target: str, response: str) -> None:
     cprint("[*]Checking for .htaccess", "yellow")
     url = target
     target = "{0.scheme}://{0.netloc}/".format(urlsplit(url))
-    resp = httpx.get(target + "/.htaccess", proxies="socks5://127.0.0.1:9050")
-    if resp.text.__contains__("403"):
+    resp = client.get(target + "/.htaccess")
+    if resp.status_code == 403:
         cprint("403 Forbidden", "blue")
-    elif not resp.text.__contains__("404") or resp.text.__contains__("500"):
+    elif resp.status_code != 404 and resp.status_code != 500:
         cprint("Alert!!", "blue")
         cprint(".htaccess file found!", "blue")
     else:
