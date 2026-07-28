@@ -2,6 +2,16 @@
 --------------------
 All notable changes to this project will be documented in this file.
 
+## 4.2.0
+
+### Added
+- Added optional `torbot app` and `torbot --app` CLI commands for launching the TorBotApp desktop UI when installed separately.
+- Added TorBotApp discovery through `--app-dir`, `TORBOT_APP_DIR`, or a sibling `TorBotApp` checkout.
+- Documented the optional desktop app architecture while keeping Node and Electron out of the Python package dependencies.
+
+### Fixed
+- Removed the deprecated `sklearn` package dependency in favor of the existing `scikit-learn` dependency so fresh installs do not fail.
+
 ## 4.1.1
 
 ### Fixed
