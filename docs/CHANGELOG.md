@@ -2,14 +2,22 @@
 --------------------
 All notable changes to this project will be documented in this file.
 
-## 4.2.0
+## 4.2.0 - 2026-07-28
+
+Install from PyPI after publishing with:
+
+```sh
+pip install torbot==4.2.0
+```
 
 ### Added
 - Added optional `torbot app` and `torbot --app` CLI commands for launching the TorBotApp desktop UI when installed separately.
 - Added TorBotApp discovery through `--app-dir`, `TORBOT_APP_DIR`, or a sibling `TorBotApp` checkout.
 - Documented the optional desktop app architecture while keeping Node and Electron out of the Python package dependencies.
+- Added a safer publish helper that checks current-version artifacts and prompts for a PyPI token only when uploading.
 
 ### Fixed
+- Moved the CLI implementation into the installed package so the `torbot` console command works from a wheel install.
 - Removed the deprecated `sklearn` package dependency in favor of the existing `scikit-learn` dependency so fresh installs do not fail.
 
 ## 4.1.1
