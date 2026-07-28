@@ -2,6 +2,19 @@
 --------------------
 All notable changes to this project will be documented in this file.
 
+## 4.3.0 - 2026-07-28
+
+### Changed
+- Made NLP classification train lazily from the packaged CSV and cache the classifier for the process, avoiding model retraining for every crawled page.
+- Changed the NLP score returned by `classify()` from a misleading random-split accuracy value to prediction confidence for the selected category.
+
+### Fixed
+- Removed runtime `training_data/` generation from page classification so installed packages do not try to write generated files into `site-packages`.
+- Removed process-wide directory changes from the NLP helpers.
+
+### Tests
+- Added direct NLP coverage for HTML text extraction, CSV loading, classifier scoring, and path-safe training-data export.
+
 ## 4.2.0 - 2026-07-28
 
 Install from PyPI after publishing with:
