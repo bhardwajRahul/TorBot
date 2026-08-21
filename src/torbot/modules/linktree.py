@@ -5,6 +5,8 @@ import http.client
 import json
 import logging
 import os
+from datetime import datetime, timezone
+from time import monotonic
 from urllib import parse
 
 import httpx
@@ -50,8 +52,11 @@ class LinkTree(Tree):
         self._url = url
         self._depth = depth
         self._client = client
+        self.crawl_failures: list[dict] = []
 
     def load(self) -> None:
+        self.crawl_started_at = datetime.now(timezone.utc)
+        self.crawl_started_monotonic = monotonic()
         self._append_node(id=self._url, parent_id=None)
         self._build_tree(url=self._url, depth=self._depth)
 
@@ -102,8 +107,28 @@ class LinkTree(Tree):
                 try:
                     self._append_node(id=child, parent_id=url)
                     self._build_tree(url=child, depth=depth)
-                except RequestError:
+                except RequestError as exc:
+                    from torbot.crawl_result import failed_page
+
+                    parent_depth = self.depth(url)
+                    self.crawl_failures.append(
+                        failed_page(child, url, parent_depth + 1, exc)
+                    )
                     continue
+
+    def to_crawl_result(
+        self, *, uses_tor: bool, terminal_status: str = "completed"
+    ) -> dict:
+        """Return the shared versioned crawl-result representation.
+
+        This is additive: ``saveJSON`` and the human-readable CLI views retain
+        their existing legacy behavior.
+        """
+        from torbot.crawl_result import CrawlResultAdapter
+
+        return CrawlResultAdapter(self, uses_tor=uses_tor).result(
+            terminal_status=terminal_status
+        )
 
     def _get_tree_file_name(self) -> str:
         root_id = self.root
