@@ -6,6 +6,7 @@ GoTor or expose either crawler's implementation details.
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 from importlib import metadata
 from time import monotonic
 from typing import Any
@@ -76,11 +77,12 @@ class CrawlResultAdapter:
         terminal_status: str = "completed",
         run_id: str | None = None,
         diagnostics: dict[str, str] | None = None,
+        include_text: bool = False,
     ) -> dict[str, Any]:
         if terminal_status not in {"completed", "cancelled", "failed", "invalid"}:
             raise ValueError("unsupported terminal status")
         ended_at = datetime.now(timezone.utc)
-        pages = [self._page(node) for node in self.tree.all_nodes_itr()]
+        pages = [self._page(node, include_text=include_text) for node in self.tree.all_nodes_itr()]
         pages.extend(getattr(self.tree, "crawl_failures", []))
         pages.sort(key=lambda page: (page["depth"], page["url"]))
         result = {
@@ -100,7 +102,7 @@ class CrawlResultAdapter:
         }
         return result
 
-    def _page(self, node: Any) -> dict[str, Any]:
+    def _page(self, node: Any, *, include_text: bool = False) -> dict[str, Any]:
         parent = self.tree.parent(node.identifier)
         depth = self.tree.depth(node.identifier)
         links = []
@@ -113,7 +115,7 @@ class CrawlResultAdapter:
         contacts.extend(
             {"value": phone, "source": "tel"} for phone in sorted(node.data.numbers)
         )
-        return {
+        page = {
             "url": node.identifier,
             "parentUrl": parent.identifier if parent else None,
             "depth": depth,
@@ -123,7 +125,24 @@ class CrawlResultAdapter:
             "errorCategory": None,
             "links": links,
             "contacts": contacts,
+            "title": node.tag,
+            "classification": {
+                "label": node.data.classification,
+                "accuracy": node.data.accuracy,
+            },
         }
+        if include_text:
+            text = getattr(node.data, "text", "")
+            page["content"] = {
+                "mediaType": "text/plain",
+                "text": text,
+                "sha256": getattr(
+                    node.data,
+                    "content_hash",
+                    hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                ),
+            }
+        return page
 
 
 def failed_page(

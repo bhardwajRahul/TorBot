@@ -1,10 +1,12 @@
 """
 Module is used for analyzing link relationships
 """
+import hashlib
 import http.client
 import json
 import logging
 import os
+import re
 from datetime import datetime, timezone
 from time import monotonic
 from urllib import parse
@@ -35,6 +37,7 @@ class LinkNode(Node):
         accuracy: float,
         numbers: list[str],
         emails: list[str],
+        text: str = "",
     ):
         super().__init__()
         self.identifier = url
@@ -44,6 +47,8 @@ class LinkNode(Node):
         self.accuracy = accuracy
         self.numbers = numbers
         self.emails = emails
+        self.text = text
+        self.content_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 class LinkTree(Tree):
@@ -79,12 +84,20 @@ class LinkTree(Tree):
         title = (
             soup.title.text.strip() if soup.title is not None else parse_hostname(id)
         )
+        text = extract_visible_text(soup)
         try:
             [classification, accuracy] = classify(resp.text)
             numbers = parse_phone_numbers(soup)
             emails = parse_emails(soup)
             data = LinkNode(
-                title, id, resp.status_code, classification, accuracy, numbers, emails
+                title,
+                id,
+                resp.status_code,
+                classification,
+                accuracy,
+                numbers,
+                emails,
+                text,
             )
             self.create_node(title, identifier=id, parent=parent_id, data=data)
         except exceptions.DuplicatedNodeIdError:
@@ -117,7 +130,11 @@ class LinkTree(Tree):
                     continue
 
     def to_crawl_result(
-        self, *, uses_tor: bool, terminal_status: str = "completed"
+        self,
+        *,
+        uses_tor: bool,
+        terminal_status: str = "completed",
+        include_text: bool = False,
     ) -> dict:
         """Return the shared versioned crawl-result representation.
 
@@ -127,7 +144,8 @@ class LinkTree(Tree):
         from torbot.crawl_result import CrawlResultAdapter
 
         return CrawlResultAdapter(self, uses_tor=uses_tor).result(
-            terminal_status=terminal_status
+            terminal_status=terminal_status,
+            include_text=include_text,
         )
 
     def _get_tree_file_name(self) -> str:
@@ -208,6 +226,14 @@ def parse_hostname(url: str) -> str:
         return hostname
 
     raise Exception("unable to parse hostname from URL")
+
+
+def extract_visible_text(soup: BeautifulSoup, *, limit: int = 50_000) -> str:
+    """Return bounded visible page text without scripts, styles, or markup."""
+    for tag in soup(["script", "style", "noscript", "template"]):
+        tag.decompose()
+    text = re.sub(r"\s+", " ", soup.get_text(" ", strip=True)).strip()
+    return text[:limit]
 
 
 def parse_links(html: str, base_url: str | None = None) -> list[str]:

@@ -20,6 +20,12 @@ Links and contacts include their source (`anchor`, `mailto`, or `tel`). Raw
 HTML, headers, cookies, credentials, and arbitrary exception strings are not
 part of the contract.
 
+When a caller explicitly requests analysis-ready output, a fetched page may
+also include a `title`, deterministic classification metadata, and `content`.
+Content contains bounded visible plain text and its SHA-256 digest. Scripts,
+styles, templates, and raw markup are excluded. The CLI exposes this form only
+through `--save result`; legacy `--save json` behavior is unchanged.
+
 GoTor's versioned report is the compatibility baseline: both projects use
 `schemaVersion: 1`, `engine`, `target`, depth/settings, timestamps, duration,
 and per-page URL/parent/depth/status/link information. TorBot's fields are
