@@ -27,6 +27,26 @@ def test_app_flag_does_not_require_url() -> None:
     assert args.url is None
 
 
+def test_analyze_command_accepts_versioned_result_path() -> None:
+    parser = set_arguments()
+    args = parser.parse_args(["analyze", "crawl-result.json", "--provider", "none"])
+
+    assert args.command == "analyze"
+    assert args.input == "crawl-result.json"
+    assert args.provider == "none"
+
+
+def test_versioned_crawl_result_has_explicit_output_path() -> None:
+    parser = set_arguments()
+    args = parser.parse_args([
+        "--url", "https://example.com", "--save", "result",
+        "--result-file", "safe-result.json",
+    ])
+
+    assert args.save == "result"
+    assert args.result_file == "safe-result.json"
+
+
 def test_find_torbot_app_from_explicit_directory(tmp_path) -> None:
     app_dir = tmp_path / "TorBotApp"
     app_dir.mkdir()

@@ -84,6 +84,24 @@ python main.py -u https://example.com --disable-socks5 --visualize tree
 torbot app
 ```
 
+### Evidence-first AI analysis
+
+Save a versioned crawl result and turn it into a cited investigation bundle:
+
+```sh
+torbot --url https://example.com --disable-socks5 \
+  --save result --result-file crawl-result.json
+torbot analyze crawl-result.json --provider ollama --model qwen3 \
+  --output investigation/
+```
+
+Analyst defaults to a local Ollama endpoint. Remote OpenAI-compatible
+providers require the explicit `--allow-remote` flag. Every supported finding
+must cite captured evidence, and a provider outage never prevents the
+deterministic evidence bundle from being written. See
+[TorBot Analyst](docs/ANALYST.md) for the offline quick start, output formats,
+privacy boundary, and schemas.
+
 ### Options
 ```text
 usage: Gather and analyze data from Tor sites.

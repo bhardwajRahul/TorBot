@@ -7,6 +7,7 @@ from pathlib import Path
 import httpx
 import toml
 
+from torbot.analyst import AnalysisError, analyze_file, write_crawl_result
 from torbot.modules.api import get_ip
 from torbot.modules.app_launcher import launch_torbot_app
 from torbot.modules.color import color
@@ -90,6 +91,27 @@ def run(arg_parser: argparse.ArgumentParser, version: str) -> None:
     if args.command == "app" or args.app:
         sys.exit(launch_torbot_app(Path.cwd(), args.app_dir))
 
+    if args.command == "analyze":
+        if not args.input:
+            arg_parser.error("analyze requires a crawl-result JSON file")
+        try:
+            report = analyze_file(
+                args.input,
+                args.output,
+                provider=args.provider,
+                model=args.model,
+                base_url=args.base_url,
+                allow_remote=args.allow_remote,
+                keyword=args.keyword,
+                redact_pattern=args.redact_pattern,
+            )
+        except (AnalysisError, OSError) as exc:
+            arg_parser.error(str(exc))
+        print(f"Investigation report written to {Path(args.output).resolve()}")
+        if report["warnings"]:
+            print("Completed with warnings: " + "; ".join(report["warnings"]))
+        return
+
     # URL is required for crawl-related actions
     if not args.url:
         arg_parser.print_help()
@@ -117,6 +139,13 @@ def run(arg_parser: argparse.ArgumentParser, version: str) -> None:
             tree.save()
         elif args.save == "json":
             tree.saveJSON()
+        elif args.save == "result":
+            result = tree.to_crawl_result(
+                uses_tor=not args.disable_socks5,
+                include_text=True,
+            )
+            write_crawl_result(args.result_file, result)
+            print(f"Crawl result written to {Path(args.result_file).resolve()}")
 
         if args.html == "display":
             fetch_html(client, args.url, tree)
@@ -144,8 +173,13 @@ def set_arguments() -> argparse.ArgumentParser:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=["app"],
-        help="Run optional TorBot desktop app",
+        choices=["app", "analyze"],
+        help="Run the desktop app or analyze a crawl-result file",
+    )
+    parser.add_argument(
+        "input",
+        nargs="?",
+        help="Versioned crawl-result JSON file used by the analyze command",
     )
     parser.add_argument(
         "-u",
@@ -162,7 +196,15 @@ def set_arguments() -> argparse.ArgumentParser:
     )
     parser.add_argument("--port", type=int, help="Port for SOCKS5 proxy", default=9050)
     parser.add_argument(
-        "--save", type=str, choices=["tree", "json"], help="Save results in a file"
+        "--save",
+        type=str,
+        choices=["tree", "json", "result"],
+        help="Save legacy tree data or a versioned crawl result",
+    )
+    parser.add_argument(
+        "--result-file",
+        default="crawl-result.json",
+        help="Path used by --save result (default: crawl-result.json)",
     )
     parser.add_argument(
         "--visualize",
@@ -204,6 +246,43 @@ def set_arguments() -> argparse.ArgumentParser:
         "--html",
         choices=["save", "display"],
         help="Saves / Displays the html of the onion link",
+    )
+    parser.add_argument(
+        "--provider",
+        choices=["none", "ollama", "openai-compatible"],
+        default="ollama",
+        help="AI provider for analyze (default: ollama on localhost)",
+    )
+    parser.add_argument(
+        "--model",
+        default="qwen3",
+        help="Model name passed to the selected provider",
+    )
+    parser.add_argument(
+        "--base-url",
+        help="OpenAI-compatible provider base URL",
+    )
+    parser.add_argument(
+        "--allow-remote",
+        action="store_true",
+        help="Explicitly allow evidence excerpts to be sent to a remote provider",
+    )
+    parser.add_argument(
+        "--output",
+        default="investigation",
+        help="Directory for Analyst outputs (default: investigation)",
+    )
+    parser.add_argument(
+        "--keyword",
+        action="append",
+        default=[],
+        help="Record deterministic keyword matches; repeat for multiple keywords",
+    )
+    parser.add_argument(
+        "--redact-pattern",
+        action="append",
+        default=[],
+        help="Additional regex redacted before remote transmission; repeat as needed",
     )
 
     return parser

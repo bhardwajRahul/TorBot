@@ -2,6 +2,17 @@
 --------------------
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Added
+- Added `--save result` for analysis-ready crawl-result v1 files with bounded visible text and content hashes.
+- Added `torbot analyze` for deterministic evidence bundles and optional local or remote OpenAI-compatible analysis.
+- Added stable evidence IDs, claim citation validation, an evidence graph, JSON schemas, and a safe surface-web fixture.
+
+### Security
+- Remote evidence transmission now requires `--allow-remote`, redacts contact data by default, and never stores API keys.
+- Crawled content is treated as untrusted data, model calls receive no tools, and uncited model output cannot become a supported finding.
+
 ## 4.3.0 - 2026-07-28
 
 ### Changed
