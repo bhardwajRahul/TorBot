@@ -48,7 +48,7 @@
 
 ### Dependencies
 - Tor (Optional)
-- Python 3.9+
+- Python 3.10+
 - pip
 
 ## Quick start
